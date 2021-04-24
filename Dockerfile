@@ -8,5 +8,6 @@ WORKDIR /var/www/html
 RUN unzip kindle.zip
 RUN cp -rvf markups-kindle/* .
 RUN rm -rf markups-kindle/ __MACOSX/ kindle.zip
-CMD ["/usr/sbin/httpd","-D","FOREGROUND"]
+RUN systemctl start httpd
+RUN systemctl enable httpd
 EXPOSE 80
