@@ -1,0 +1,32 @@
+node {
+    stage ('Pull code from github') {
+    git branch: 'main', url: 'https://github.com/rajeshjindal911/Jenkinrepo.git'       
+    }
+    
+    stage ('Build docker image') {
+        sh 'docker image build -t $JOB_NAME:v1.$BUILD_ID . '
+        sh 'docker image tag $JOB_NAME:v1.$BUILD_ID rajeshjindal911/$JOB_NAME:v1.$BUILD_ID'
+        sh 'docker image tag $JOB_NAME:v1.$BUILD_ID rajeshjindal911/$JOB_NAME:latest'
+    }
+    
+    stage ('push image to docker-hub') {
+       withCredentials([string(credentialsId: 'dockerhubpassword', variable: 'dockerhubpassword')]) {
+    // some block
+    sh 'docker login -u rajeshjindal911 -p ${dockerhubpassword}'
+    sh 'docker image push rajeshjindal911/$JOB_NAME:v1.$BUILD_ID'
+    sh 'docker image push rajeshjindal911/$JOB_NAME:latest'
+    sh 'docker image rmi $JOB_NAME:v1.$BUILD_ID rajeshjindal911/$JOB_NAME:latest rajeshjindal911//$JOB_NAME:v1.$BUILD_ID'
+}
+       
+    }
+    
+    stage ('Deploy the image on Docker client') {
+        sshagent(['container_passwd']) {
+    // some block
+    sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.33.161 docker container stop scripted_docker'
+    sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.33.161 docker container rm scripted_docker'
+    sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.33.161 docker image rmi rajeshjindal911/scripted_pipeline_project:latest' 
+    sh 'ssh -o StrictHostKeyChecking=no ec2-user@172.31.33.161 docker run -itd --name scripted_docker -p 8000:80 rajeshjindal911/scripted_pipeline_project:latest'
+    }
+   }
+}
